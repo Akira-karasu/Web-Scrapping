@@ -1,0 +1,393 @@
+from bs4 import BeautifulSoup
+import requests
+
+def url_checker(url_req):
+        if url_req.status_code >= 100 and url_req.status_code <= 199:
+            return f"Informational Response: {url_req.status_code}"
+        elif url_req.status_code >= 200 and url_req.status_code <= 299:
+            return f"Successful Response: {url_req.status_code}"
+        elif url_req.status_code >= 300 and url_req.status_code <= 399:
+            return f"Client Error Responses: {url_req.status_code}"
+        elif url_req.status_code >= 400 and url_req.status_code <= 499:
+            return f"Server Error Responses: {url_req.status_code}"
+        else:
+            return "Invalid!"
+
+def scrapping_scrape_this_site(url_req, url):
+        soup = BeautifulSoup(url_req.text, "lxml")
+
+        page_result = []
+
+        scrape_page_link = soup.find_all("div", class_="page")
+
+        print(f"This has {len(scrape_page_link)} content")
+
+        for x in (scrape_page_link):
+            url_pages = url.replace("/pages/", "") + x.a['href']
+            page_result.append(url_pages)
+
+            print(f"{x.h3.text.strip()}")
+            print(x.p.text.strip())
+            print(f"URL: {url_pages}")
+            print()
+
+        return page_result
+
+def scrapping_countries_of_the_world(url):
+
+    result = []
+     
+    soup = BeautifulSoup(url.text, "lxml")
+     
+    country = soup.find_all("div", class_="country")
+
+
+    for x in country:
+
+        details = {}
+
+        country_name = x.h3.text.strip()
+
+        country_info = x.find("div", class_= "country-info")
+
+        country_capital = country_info.find("span", class_= "country-capital")
+
+        country_population = country_info.find("span", class_= "country-population")
+
+        country_area = country_info.find("span", class_= "country-area")
+        
+        strong_elem = country_info.find_all("strong")
+
+        details["country_name"] = country_name.upper()
+        details[strong_elem[0].text.replace(":","")] = country_capital.text.upper()
+        details[strong_elem[1].text.replace(":","")] = country_population.text
+        details[strong_elem[2].text.replace(":","")] = country_area.text
+
+        result.append(details)
+
+
+    ## MAKING TABLE
+
+    # Extract headers
+    headers = result[0].keys()
+
+    # Define column widths (match the actual keys in the data)
+    column_widths = {
+        'country_name': 45,
+        'Capital': 30,
+        'Population': 30,
+        'Area (km2)': 30
+    }
+
+    # Print the table headers with proper alignment
+    header_row = " | ".join(key.ljust(column_widths[key]) for key in headers)
+    print(header_row)
+    print("-" * len(header_row))
+
+    # Print each row with proper alignment
+    for row in result:
+        print(" | ".join(str(row[key]).ljust(column_widths[key]) for key in headers))
+
+
+def scrapping_Hockey_Team(page_2):
+
+
+    all_data_table = []
+
+    all_per_page = []
+
+    request = requests.get(page_2)
+
+    soup = BeautifulSoup(request.text, "lxml")
+
+    select = soup.find("select", class_="form-control")
+
+    option = select.find_all("option")
+
+    inp = input("Enter you per page (25, 50, 100): ")
+
+    for x in option:
+        per_page = x.text
+        if per_page == inp:
+
+            num_page = page_2 + f"?per_page={inp}"
+            
+            request = requests.get(num_page)
+
+            soup = BeautifulSoup(request.text, "lxml")
+
+            ul = soup.find("ul", class_="pagination")
+
+            li = ul.find_all("li")
+
+            for x in li:
+                a = x.find("a")
+
+                a_link = "https://www.scrapethissite.com" + a["href"]
+
+                all_per_page.append(a_link)
+
+            
+    for x in all_per_page:
+        request = requests.get(x)
+        soup = BeautifulSoup(request.text, "lxml")
+                
+               
+
+        table = soup.find("table")
+
+
+        table_row = table.find_all("tr", class_="team")
+                    
+
+        for tbl_row in table_row:
+
+            data = {}
+
+            tbl_data_name = tbl_row.find("td", class_="name").text
+            tbl_data_year = tbl_row.find("td", class_="year").text
+            tbl_data_win = tbl_row.find("td", class_="wins").text
+            tbl_data_losses = tbl_row.find("td", class_="losses").text
+            tbl_data_otlosses = tbl_row.find("td", class_="ot-losses").text
+            tbl_data_pct = tbl_row.find("td", class_="pct").text
+            tbl_data_gf = tbl_row.find("td", class_="gf").text
+            tbl_data_ga = tbl_row.find("td", class_="ga").text
+            tbl_data_diff = tbl_row.find("td", class_="diff").text
+
+            table_header = table.find_all("th")
+
+            data[table_header[0].text.strip()] = tbl_data_name.strip().replace("\n", "")
+            data[table_header[1].text.strip()] = tbl_data_year.strip().replace("\n", "")
+            data[table_header[2].text.strip()] = tbl_data_win.strip().replace("\n", "")
+            data[table_header[3].text.strip()] = tbl_data_losses.strip().replace("\n", "")
+            data[table_header[4].text.strip()] = tbl_data_otlosses.strip().replace("\n", "")
+            data[table_header[5].text.strip()] = tbl_data_pct.strip().replace("\n", "")
+            data[table_header[6].text.strip()] = tbl_data_gf.strip().replace("\n", "")
+            data[table_header[7].text.strip()] = tbl_data_ga.strip().replace("\n", "")
+            data[table_header[8].text.strip()] = tbl_data_diff.strip().replace("\n", "")
+
+            all_data_table.append(data)
+
+
+
+            # MAKING TABLE
+
+            # Extract headers
+            headers = all_data_table[0].keys()
+
+            # Define column widths (match the actual keys in the data)
+            column_widths = {
+                'Team Name': 30,
+                'Year': 20,
+                'Wins': 20,
+                'Losses': 20,
+                'OT Losses': 20,
+                'Win %': 20,
+                'Goals For (GF)': 20,
+                'Goals Against (GA)': 20,
+                '+ / -': 20
+            }
+
+            # Print the table headers with proper alignment
+            header_row = " | ".join(key.ljust(column_widths[key]) for key in headers)
+            print(header_row)
+            print("-" * len(header_row))
+
+            # Print each row with proper alignment
+            for row in all_data_table:
+                print(" | ".join(str(row[key]).ljust(column_widths[key]) for key in headers))
+                print("-" * len(header_row))
+            print("\n")
+
+
+                    
+
+
+    # all_per_page = []
+
+    # all_page = []
+
+    # all_data_table = []
+
+    # req = requests.get(page_2)
+
+    # soup = BeautifulSoup(req.text,"lxml")
+
+    # section = soup.find("section", id= "hockey")
+
+    # ul_pagination = section.find("ul", class_= "pagination")
+
+    # selector = section.find("select", class_= "form-control")
+
+    # selector_option = selector.find_all("option")
+
+    # for x in selector_option:
+    #     per_page = {}
+    #     option = x.text
+
+    #     per_page[f"per_{option}"] = f"https://www.scrapethissite.com/pages/forms/?per_page={option}"
+
+    #     all_per_page.append(per_page)
+
+    # print(all_per_page)
+    # user_input = input("Enter how many per page: ")
+
+    # for x in all_per_page:
+    #     for k in x:
+    #         print(k)
+    #         if k == user_input:
+
+    #             print(per_page[user_input])
+
+                # req = requests.get(per_page[k])
+
+                # soup = BeautifulSoup(req.text,"lxml")
+
+                # section = soup.find("section", id= "hockey")
+
+                # ul_pagination = section.find("ul", class_= "pagination")
+
+                # li = ul_pagination.find_all("li")
+                # for x in li:
+                #     a = x.find("a").text
+                #     print(a)
+
+
+
+    # for x in range(1, 101):
+    #     pagination = {}
+    #     page = f"{page_2}?page_num={x}&per_page=100"
+
+    #     pagination[f"page-{str(x)}"] = page
+
+    #     all_page.append(pagination)
+    
+
+    # while True:
+
+    #     # for x in all_page:
+    #     #     print(x)
+
+    #     print("\n")
+        
+    #     print("pages 1 - 100")
+    #     user_input = input("Enter Page: ")
+
+    #     print("\n")
+
+    #     for x in all_page:
+    #         for k in x:
+    #             if k == user_input:
+    #                 global page_chose
+    #                 page_chose = x[k]
+        
+
+    #     req = requests.get(page_chose)
+
+    #     soup = BeautifulSoup(req.text,"lxml")
+
+    #     section = soup.find("section", id= "hockey")
+
+    #     selector = section.find("select", class_= "form-control")
+
+    #     print(selector)  
+
+    #     table = soup.find("table")
+
+
+    #     table_row = table.find_all("tr", class_="team")
+        
+
+    #     for tbl_row in table_row:
+
+    #         data = {}
+
+    #         tbl_data_name = tbl_row.find("td", class_="name").text
+    #         tbl_data_year = tbl_row.find("td", class_="year").text
+    #         tbl_data_win = tbl_row.find("td", class_="wins").text
+    #         tbl_data_losses = tbl_row.find("td", class_="losses").text
+    #         tbl_data_otlosses = tbl_row.find("td", class_="ot-losses").text
+    #         tbl_data_pct = tbl_row.find("td", class_="pct").text
+    #         tbl_data_gf = tbl_row.find("td", class_="gf").text
+    #         tbl_data_ga = tbl_row.find("td", class_="ga").text
+    #         tbl_data_diff = tbl_row.find("td", class_="diff").text
+
+    #         table_header = table.find_all("th")
+
+    #         data[table_header[0].text.strip()] = tbl_data_name.strip().replace("\n", "")
+    #         data[table_header[1].text.strip()] = tbl_data_year.strip().replace("\n", "")
+    #         data[table_header[2].text.strip()] = tbl_data_win.strip().replace("\n", "")
+    #         data[table_header[3].text.strip()] = tbl_data_losses.strip().replace("\n", "")
+    #         data[table_header[4].text.strip()] = tbl_data_otlosses.strip().replace("\n", "")
+    #         data[table_header[5].text.strip()] = tbl_data_pct.strip().replace("\n", "")
+    #         data[table_header[6].text.strip()] = tbl_data_gf.strip().replace("\n", "")
+    #         data[table_header[7].text.strip()] = tbl_data_ga.strip().replace("\n", "")
+    #         data[table_header[8].text.strip()] = tbl_data_diff.strip().replace("\n", "")
+
+    #         all_data_table.append(data)
+
+
+
+    #     # MAKING TABLE
+
+    #     # Extract headers
+    #     headers = all_data_table[0].keys()
+
+    #     # Define column widths (match the actual keys in the data)
+    #     column_widths = {
+    #         'Team Name': 30,
+    #         'Year': 20,
+    #         'Wins': 20,
+    #         'Losses': 20,
+    #         'OT Losses': 20,
+    #         'Win %': 20,
+    #         'Goals For (GF)': 20,
+    #         'Goals Against (GA)': 20,
+    #         '+ / -': 20
+    #     }
+
+    #     # Print the table headers with proper alignment
+    #     header_row = " | ".join(key.ljust(column_widths[key]) for key in headers)
+    #     print(header_row)
+    #     print("-" * len(header_row))
+
+    #     # Print each row with proper alignment
+    #     for row in all_data_table:
+    #         print(" | ".join(str(row[key]).ljust(column_widths[key]) for key in headers))
+    #         print("-" * len(header_row))
+    #     print("\n")
+    
+
+                  
+
+        
+
+
+
+        
+
+
+
+        
+
+
+
+
+
+if __name__ == "__main__": 
+
+    url = "https://www.scrapethissite.com/pages/"
+
+    url_request = requests.get(url)
+
+    print(url_checker(url_request))
+
+    page_1 = scrapping_scrape_this_site(url_request, url)[0]
+
+    page_2 = scrapping_scrape_this_site(url_request, url)[1]
+
+    url_request = requests.get(page_1)
+
+    # print(scrapping_countries_of_the_world(url_request))
+
+    scrapping_Hockey_Team(page_2)
